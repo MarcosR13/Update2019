@@ -1,0 +1,57 @@
+import pandas as pd
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
+
+# Carregue as planilhas em DataFrames
+planilha1 = pd.read_excel('Arrival_Dates.xlsx')
+planilha2 = pd.read_excel('Arrival_Dates_Final.xlsx')
+
+
+# Certifique-se de que ambos os DataFrames tenham o mesmo número de linhas
+min_length = min(len(planilha1), len(planilha2))
+planilha1 = planilha1.iloc[:min_length]
+planilha2 = planilha2.iloc[:min_length]
+
+# Compare as duas planilhas linha por linha
+resultado_comparacao = []
+
+for indice, linha1 in planilha1.iterrows():
+    linha2 = planilha2.iloc[indice]
+
+    diferenca = []
+    for coluna in planilha1.columns:
+        if linha1[coluna] != linha2[coluna]:
+            diferenca.append(f'{coluna}: {linha1[coluna]} vs {linha2[coluna]}')
+
+    if len(diferenca) == 0:
+        resultado_comparacao.append('OK')
+    else:
+        resultado_comparacao.append(', '.join(diferenca))
+
+# Adicione a coluna "Status" aos DataFrames originais
+planilha1['Status'] = resultado_comparacao
+planilha2['Status'] = resultado_comparacao
+
+# Crie um novo arquivo Excel com três abas
+with pd.ExcelWriter('resultado_planilhas.xlsx', engine='openpyxl') as writer:
+
+    # Adicione os DataFrames com a coluna "Status" às abas
+    planilha1.to_excel(writer, sheet_name='Planilha1', index=False)
+    planilha2.to_excel(writer, sheet_name='Planilha2', index=False)
+
+    # Crie uma terceira aba apenas com as diferenças
+    diferenca_df = pd.DataFrame(resultado_comparacao, columns=['Diferenças'])
+    diferenca_df.to_excel(writer, sheet_name='Diferenças', index=False)
+
+    # Percorra todas as abas e aplique o estilo de preenchimento em amarelo nas linhas com diferenças
+    wb = writer.book
+    for sheet_name in wb.sheetnames:
+        worksheet = wb[sheet_name]
+
+        for row in worksheet.iter_rows(min_row=2, max_row=len(resultado_comparacao) + 1):
+            if 'OK' not in row[-1].value:
+                for cell in row:
+                    yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+                    cell.fill = yellow_fill
+
+# Salve o arquivo Excel final
