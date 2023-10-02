@@ -1,0 +1,70 @@
+' Especifique o caminho do arquivo PST que deseja acessar
+Dim pstFilePath As String
+pstFilePath = "C:\Caminho\Para\Seu\Arquivo.pst"
+
+' Nome da planilha existente na pasta de trabalho atual
+Dim existingSheetName As String
+existingSheetName = "PlanilhaExistente"
+
+' Inicialize o aplicativo Outlook
+Set olApp = CreateObject("Outlook.Application")
+
+' Acesse o Namespace do Outlook
+Set olNamespace = olApp.GetNamespace("MAPI")
+
+' Adicione a PST ao perfil do Outlook
+olNamespace.AddStore pstFilePath
+
+' Acesse a pasta dentro da PST
+' Substitua "NomeDaPasta" pelo nome da pasta que contém o email desejado
+Set olFolder = olNamespace.Folders.GetLast
+Set olFolder = olFolder.Folders("NomeDaPasta")
+
+' Acesse o email desejado
+' Substitua "Assunto do Email" pelo assunto do email que deseja copiar
+For Each olMail In olFolder.Items
+    If olMail.Subject = "Assunto do Email" Then
+        ' Acesse o documento do Word no corpo do email
+        Set wdDoc = olMail.GetInspector.WordEditor
+
+        ' Acesse o conteúdo completo do corpo do email
+        Set wdRange = wdDoc.Content
+
+        ' Procure uma tabela no conteúdo do email
+        If wdRange.Tables.Count > 0 Then
+            Set tbl = wdRange.Tables(1)
+            ' Inicialize o aplicativo Excel
+            Set xlApp = CreateObject("Excel.Application")
+
+            ' Acesse a pasta de trabalho existente
+            Set xlWorkbook = xlApp.Workbooks.Open("Caminho\Para\Sua\Pasta\De\Trabalho.xlsx")
+
+            ' Acesse a planilha existente pelo nome
+            Set xlSheet = xlWorkbook.Sheets(existingSheetName)
+
+            ' Cole a tabela do Word na planilha existente
+            tbl.Range.Copy
+            xlSheet.Cells(1, 1).PasteSpecial Paste:=xlPasteValues
+
+            ' Feche e salve a pasta de trabalho
+            xlWorkbook.Close SaveChanges:=True
+
+            ' Libere os objetos do Excel
+            Set xlApp = Nothing
+            Set xlWorkbook = Nothing
+            Set xlSheet = Nothing
+
+            ' Sair do loop após encontrar o email desejado
+            Exit For
+        End If
+    End If
+Next olMail
+
+' Libere os objetos do Outlook
+Set olApp = Nothing
+Set olNamespace = Nothing
+Set olFolder = Nothing
+Set olMail = Nothing
+Set wdDoc = Nothing
+Set wdRange = Nothing
+Set tbl = Nothing
