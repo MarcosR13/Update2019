@@ -1,0 +1,41 @@
+import pandas as pd
+import os
+from datetime import datetime
+from openpyxl import Workbook
+
+# Function to capture the logged-in user
+racf = os.getlogin()
+
+# Path to the network where the Murex file will be saved
+cambio_mx = fr"C:\Users\{racf}\OneDrive - Banco Itaú SA\Área de Trabalho\Batimentos\Cambio\testeBatimento_final.xlsx"
+
+# Read the file
+mx = pd.read_excel(cambio_mx)
+
+# Function to convert the 'TRN. DATE' and 'EXPIRY' columns
+def converter_data(data_str):
+    data_obj = datetime.strptime(data_str, "%d %b %Y")
+    return data_obj.strftime("%d/%m/%Y")
+
+colunas_a_converter = ['TRN. DATE', 'EXPIRY']
+for coluna in colunas_a_converter:
+    mx[coluna] = mx[coluna].apply(converter_data)
+
+# Function to check the operation side
+def moeda_referencia(lado):
+    if lado == "B":
+        return "S"
+    else:
+        return "B"
+
+# Function to handle 'MARKET INDEX'
+mx['MARKET INDEX'] = mx['MARKET INDEX'].str[:7].str.replace("/", "")
+
+# Apply the condition and create the new 'lado_mx' column
+mx['lado_mx'] = mx.apply(lambda row: moeda_referencia(row['B/S']), axis=1)
+
+# Columns to exclude
+excluir_colunas = ["CNT.NB", "B/S", "OPT_MOPLST", "TRN. STATUS", "TRN. NB", "STP.STATUS", "ID_BDC"]
+mx = mx.drop(excluir_colunas, axis=1)
+
+mx.to_excel(fr"C:\Users\{racf}\OneDrive - Banco Itaú SA\Área de Trabalho\Batimentos\Cambio\mx.xlsx", index=False)
