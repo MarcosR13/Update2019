@@ -1,0 +1,116 @@
+import pandas as pd
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill
+
+# Carregar os dados das planilhas
+planilha1 = pd.read_excel('planilha1.xlsx')
+planilha2 = pd.read_excel('planilha2.xlsx')
+
+# Adicionar coluna de status
+planilha1['Status'] = ''
+planilha2['Status'] = ''
+
+# Lista das colunas relevantes para comparação
+colunas_de_comparacao = list(planilha1.columns)[:-1]  # Remove a coluna 'Status'
+
+# Percorrer as linhas não batidas da Planilha 1
+for idx1, row1 in planilha1[planilha1['Status'] != 'BATIDO'].iterrows():
+    best_match_idx = -1  # Índice da melhor correspondência na Planilha 2
+    best_match_score = 0  # Pontuação da melhor correspondência
+
+    for idx2, row2 in planilha2[planilha2['Status'] != 'BATIDO'].iterrows():
+        score = 0  # Pontuação para esta comparação
+
+        # Comparar os valores das células
+        for col in colunas_de_comparacao:
+            if row1[col] == row2[col]:
+                score += 1  # Aumentar a pontuação se as células forem iguais
+
+        # Se esta correspondência for a melhor até agora, atualize os valores
+        if score > best_match_score:
+            best_match_score = score
+            best_match_idx = idx2
+
+    # Se uma correspondência foi encontrada, identifique as colunas diferentes
+    if best_match_idx != -1:
+        row2 = planilha2.iloc[best_match_idx]
+
+        differing_columns = [col for col in colunas_de_comparacao if row1[col] != row2[col]]
+
+        if differing_columns:
+            planilha1.at[idx1, 'Status'] = ', '.join(differing_columns)
+            planilha2.at[best_match_idx, 'Status'] = ', '.join(differing_columns)
+        else:
+            planilha1.at[idx1, 'Status'] = 'BATIDO'
+            planilha2.at[best_match_idx, 'Status'] = 'BATIDO'
+    else:
+        planilha1.at[idx1, 'Status'] = 'Não Encontrado em Planilha 2'
+
+# Percorrer as linhas não batidas da Planilha 2
+for idx2, row2 in planilha2[planilha2['Status'] != 'BATIDO'].iterrows():
+    best_match_idx = -1
+    best_match_score = 0
+
+    for idx1, row1 in planilha1[planilha1['Status'] != 'BATIDO'].iterrows():
+        score = 0
+
+        for col in colunas_de_comparacao:
+            if row2[col] == row1[col]:
+                score += 1
+
+        if score > best_match_score:
+            best_match_score = score
+            best_match_idx = idx1
+
+    if best_match_idx == -1:
+        planilha2.at[idx2, 'Status'] = 'Não Encontrado em Planilha 1'
+    else:
+        row1 = planilha1.iloc[best_match_idx]
+
+        differing_columns = [col for col in colunas_de_comparacao if row2[col] != row1[col]]
+
+        if differing_columns:
+            planilha2.at[idx2, 'Status'] = ', '.join(differing_columns)
+            planilha1.at[best_match_idx, 'Status'] = ', '.join(differing_columns)
+        else:
+            planilha2.at[idx2, 'Status'] = 'BATIDO'
+            planilha1.at[best_match_idx, 'Status'] = 'BATIDO'
+
+# Escrever as planilhas em um arquivo Excel
+with pd.ExcelWriter('resultado_comparacao_com_diferencas.xlsx') as writer:
+    planilha1.to_excel(writer, sheet_name='Planilha 1', index=False)
+    planilha2.to_excel(writer, sheet_name='Planilha 2', index=False)
+
+    # Criação da terceira aba com diferenças destacadas
+    wb = writer.book
+    diff_sheet = wb.create_sheet('Diferenças')
+
+    yellow_fill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
+
+    # Escrever os cabeçalhos das colunas
+    diff_sheet.append(planilha1.columns.tolist())
+
+    # Percorrer as diferenças da Planilha 1 na aba 'Diferenças'
+    for idx, row in planilha1.iterrows():
+        if planilha1.at[idx, 'Status'] != 'BATIDO':
+            row_data = planilha1.iloc[idx].tolist()
+            diff_sheet.append(row_data)
+
+            if planilha1.at[idx, 'Status'] != '':
+                for c_idx, value in enumerate(row_data):
+                    if planilha1.columns[c_idx] != 'Status' and value != planilha2.iloc[idx].iloc[c_idx]:
+                        diff_sheet.cell(row=diff_sheet.max_row, column=c_idx + 1).fill = yellow_fill
+
+    # Percorrer as diferenças da Planilha 2 na aba 'Diferenças'
+    for idx, row in planilha2.iterrows():
+        if planilha2.at[idx, 'Status'] != 'BATIDO':
+            row_data = planilha2.iloc[idx].tolist()
+            diff_sheet.append(row_data)
+
+            if planilha2.at[idx, 'Status'] != '':
+                for c_idx, value in enumerate(row_data):
+                    if planilha2.columns[c_idx] != 'Status' and value != planilha1.iloc[idx].iloc[c_idx]:
+                        diff_sheet.cell(row=diff_sheet.max_row, column=c_idx + 1).fill = yellow_fill
+
+# Salvar o arquivo Excel
+wb.save('resultado_comparacao_com_diferencas.xlsx')
