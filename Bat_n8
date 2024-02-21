@@ -1,0 +1,21 @@
+def verificar_e_executar_nova_verificacao(planilha1, planilha2):
+    cp_inicial_counterpart_diff_planilha1 = (planilha1['STATUS'].str.contains('COUNTERPART')) & (planilha1['STATUS'].str.contains('INICIAL_CP')) & (planilha2['STATUS'] != 'BATIDO')
+    cp_inicial_counterpart_diff_planilha2 = (planilha2['STATUS'].str.contains('COUNTERPART')) & (planilha2['STATUS'].str.contains('INICIAL_CP')) & (planilha1['STATUS'] != 'BATIDO')
+
+    if cp_inicial_counterpart_diff_planilha1.any() or cp_inicial_counterpart_diff_planilha2.any():
+        # Rode novamente a comparação
+        manipular_dados_de_status(planilha1, planilha2)
+        manipular_dados_de_status(planilha2, planilha1)
+        return True
+    else:
+        return False
+
+# Depois de rodar a comparação inicial e manipular os dados de status:
+rerun = verificar_e_executar_nova_verificacao(planilha1, planilha2)
+if rerun:
+    # Salve novamente os resultados após a nova verificação
+    with pd.ExcelWriter('resultado.xlsx') as writer:
+        planilha1.to_excel(writer, sheet_name='MUREX', index=False)
+        planilha2.to_excel(writer, sheet_name='BOOK', index=False)
+        # etc... (código para adicionar aba 'Diferenças' e destacar diferenças)
+    # Carregue o arquivo Excel novamente e repita o processo, se necessário
