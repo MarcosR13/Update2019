@@ -1,0 +1,132 @@
+Sub ChamarFuncaoPython()
+    Dim Python As Object
+    Dim resultado As Boolean
+    
+    ' Crie uma instância do Python
+    Set Python = CreateObject("Python.Runtime")
+
+    ' Chame a função Python e obtenha o resultado
+    resultado = Python.Execute("verificar_coluna_preenchida('caminho/para/seu/arquivo.xlsx')")
+
+    ' Exiba uma mensagem com base no resultado
+    If resultado Then
+        MsgBox "Todas as linhas da coluna BMF CONTRACT estão preenchidas."
+    Else
+        MsgBox "Algumas linhas da coluna BMF CONTRACT não estão preenchidas."
+    End If
+
+    ' Libere a instância do Python
+    Set Python = Nothing
+End Sub
+
+
+
+
+
+
+import openpyxl
+
+# Função para verificar se todas as linhas da coluna BMF CONTRACT estão preenchidas
+def verificar_coluna_preenchida(caminho_arquivo):
+    wb = openpyxl.load_workbook(caminho_arquivo)
+    planilha = wb.active
+
+    # Obtém a coluna BMF CONTRACT
+    coluna_bmf_contract = planilha['BM']
+
+    # Verifica se todas as células na coluna estão preenchidas
+    for celula in coluna_bmf_contract:
+        if celula.value is None:
+            return False
+
+    return True
+
+
+# Função para criar um arquivo Excel com base no resultado da verificação
+def criar_arquivo_excel(resultado_verificacao, caminho_arquivo):
+    if resultado_verificacao:
+        # Criar um novo arquivo Excel
+        wb = openpyxl.Workbook()
+
+        # Criar planilhas "OTC" e "Barreira"
+        planilha_otc = wb.create_sheet("OTC")
+        planilha_barreira = wb.create_sheet("Barreira")
+
+        # Definir o mapeamento de coluna para tipo de barreira
+        mapeamento_tipo_barreira = {
+            "OD": "OD_CONTINUOS",
+            "IN": "IN_CONTINUOS",
+            "OUD": "OUD_CONTINUOS",
+            "IOU": "IOU_CONTINUOS"
+        }
+
+        # Layout com Barreira
+        planilha_barreira.append(["Coluna 1", "Coluna 2", "Coluna 3"])  # Definir os nomes das colunas do arquivo final
+        colunas_para_copiar_barreira = ["Coluna1", "Coluna2", "Coluna3"]  # Informar os nomes das colunas para copiar os valores
+
+        # Layout sem Barreira
+        planilha_otc.append(["Coluna A", "Coluna B", "Coluna C"])  # Definir os nomes das colunas do arquivo final
+        colunas_para_copiar_otc = ["ColunaA", "ColunaB", "ColunaC"]  # Informar os nomes das colunas para copiar os valores
+
+        # Mapear os nomes das colunas para os índices
+        if resultado_verificacao:
+            indice_colunas_barreira = {coluna.value: coluna.column for coluna in planilha_barreira[1]}
+        else:
+            indice_colunas_otc = {coluna.value: coluna.column for coluna in planilha_otc[1]}
+
+        # Mapeamento de colunas da planilha de barreira para os valores específicos
+        valores_especificos_barreira = {
+            "Coluna 3": 1,  # Exemplo de valor específico para a coluna 3 da planilha de barreira
+            # Adicione mais colunas e valores conforme necessário
+        }
+
+        # Mapeamento de colunas da planilha "OTC" para os valores específicos
+        valores_especificos_otc = {
+            "Coluna C": 2,  # Exemplo de valor específico para a coluna C da planilha "OTC"
+            # Adicione mais colunas e valores conforme necessário
+        }
+
+        # Copiar os dados para as colunas correspondentes
+        arquivo_original = openpyxl.load_workbook(caminho_arquivo)
+        planilha_original = arquivo_original.active
+
+        for linha in planilha_original.iter_rows(min_row=2, values_only=True):
+            # Verifica o tipo de barreira
+            tipo_barreira = linha[indice_colunas_original["TIPO_BARREIRA"]]
+
+            # Determina as colunas para copiar com base no tipo de barreira
+            if tipo_barreira == "CONTINUOS":
+                colunas_para_copiar = colunas_para_copiar_barreira
+                indice_colunas = indice_colunas_barreira
+                valores_especificos = valores_especificos_barreira
+                planilha_destino = planilha_barreira
+            else:
+                colunas_para_copiar = colunas_para_copiar_otc
+                indice_colunas = indice_colunas_otc
+                valores_especificos = valores_especificos_otc
+                planilha_destino = planilha_otc
+
+            # Copia os dados para as colunas correspondentes
+            dados = []
+            for coluna in colunas_para_copiar:
+                if coluna in valores_especificos:
+                    dados.append(valores_especificos[coluna])  # Usar valor específico definido no mapeamento
+                else:
+                    dados.append(linha[indice_colunas[coluna]])  # Copiar valor da coluna original
+
+            planilha_destino.append(dados)
+
+        # Remover a planilha padrão "Sheet"
+        wb.remove(wb['Sheet'])
+
+        # Salva o arquivo Excel
+        wb.save("novo_arquivo.xlsx")
+
+
+# Substitua "caminho/para/seu/arquivo.xlsx" pelo caminho real para o arquivo Excel que você deseja verificar
+caminho_arquivo = "caminho/para/seu/arquivo.xlsx"
+
+# Verificar se todas as linhas da coluna BMF CONTRACT estão preenchidas
+if verificar_coluna_preenchida(caminho_arquivo):
+    # Se todas as linhas estiverem preenchidas, criar o arquivo Excel
+    criar_arquivo_excel(True, caminho_arquivo)
