@@ -1,0 +1,175 @@
+Sim, você está correto. Se houver uma nova verificação (`rerun`), as alterações também devem ser refletidas na aba "Diferenças". Vou corrigir o código para incluir a atualização da aba "Diferenças" durante o rerun:
+
+```python
+import pandas as pd
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
+import numpy as np
+
+plan1_colunas_ignoradas = ['PRODUTO', 'A/E', 'MUREX ID']
+plan2_colunas_ignoradas = ['PB_COUNTERPART', 'PB_INCIAL_CP']
+
+def encontrar_melhor_combinacao(row1, row2):
+    # Comparando célula por célula ae identificando diferenças entre as linhas de cda planilha
+    row1 = row1.drop(plan1_colunas_ignoradas, errors='ignore')
+    row2 = row2.drop(plan2_colunas_ignoradas, errors='ignore')
+    diferenca = row1 != row2
+    colunas_com_diferenca = diferenca[diferenca].index.tolist()
+
+    # Identificar colunas vázias com o mesmo nome de coluna em ambas as planilhas
+    colunas_vazias_iguais = [col for col in row1.index if pd.isna(row1[col]) and pd.isna(row2[col])]
+
+    # Removendo colunas vazias iguais das colunas com diferenca
+    colunas_com_diferenca = [col for col in colunas_com_diferenca if col not in colunas_vazias_iguais]
+
+    return colunas_com_diferenca
+
+def manipular_dados_de_status(df1, df2):
+    for index, row in df1.iterrows():
+        if row['STATUS'] == 'NÃO BATIDO':
+            encontrado = False
+            for index2, row2 in df2.iterrows():
+                if row2['STATUS'] == 'NÃO BATIDO':
+                    colunas_com_diferenca = encontrar_melhor_combinacao(row, row2)
+                    if colunas_com_diferenca:
+                        if len(colunas_com_diferenca) > 4:
+                            df1.at[index, 'STATUS'] = 'NÃO ENCONTRADO'
+                            #break
+                        else:
+                            df1.at[index, 'STATUS'] = f"{index}:{', '.join(colunas_com_diferenca)}"
+                            df2.at[index2, 'STATUS'] = f"{index}:{', '.join(colunas_com_diferenca)}"
+                            encontrado = True
+
+            if not encontrado:
+                df1.at[index, 'STATUS'] = 'NÃO ENCONTRADO'
+
+def destacar_diferencas_na_panilha(diff_sheet, status_value, planilha_diferencas):
+    if 'NÃO ENCONTRADO' not in status_value and status_value != 'BATIDO':
+        status_value = status_value.split(', ')
+        for col_name in status_value:
+            col_index = diff_sheet[status_value].index(col_name) + 1
+            for row_idx in range(2, diff_sheet.max_row + 1):
+                cell = diff_sheet.cell(row=row_idx, column=col_index)
+                cell.fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+
+def extrair_diferencas(row):
+    if ':' in row['STATUS']:
+        _, diferencas = row['STATUS'].split(':', 1)
+        return diferencas
+    else:
+        return row['STATUS']
+
+# Carregar as planilhas
+planilha1 = pd.read_excel("planilha1.xlsx")
+planilha2 = pd.read_excel("planilha2.xlsx")
+
+planilha1['NOTIONAL M2'] = planilha1['NOTIONAL M2'].round().astype(np.int64)
+planilha2['NOTIONAL M2'] = planilha2['NOTIONAL M2'].round().astype(np.int64)
+
+# Adicionar a coluna STATUS
+planilha1['STATUS'] = 'NÃO BATIDO'
+planilha2['STATUS'] = 'NÃO BATIDO'
+
+# Iterar linha por linha da planiilha1
+for index1, row1 in planilha1.iterrows():
+    row1_sem_colunas_extras = row1.drop(plan1_colunas_ignoradas, errors='ignore')
+    planilha2_sem_colunas_extras = planilha2.drop(columns=plan2_colunas_ignoradas, errors='ignore')
+    correspondente = planilha2_sem_colunas_extras.apply(lambda row2: row1_sem_colunas_extras(row2) or (row1_sem_colunas_extras.isna().all() and row2.isna.all()), axis=1)
+
+    if correspondente.any():
+        index2 = correspondente[correspondente].index[0]
+        planilha1.at[index1, 'STATUS'] = 'BATIDO'
+        planilha2.at[index2, 'STATUS'] = 'BATIDO'
+
+# MAnipular os dados de STATUS
+manipular_dados_de_status(planilha1, planilha2)
+manipular_dados_de_status(planilha2, planilha1)
+
+# Criar um arquivo Excel com três
+with pd.ExcelWriter(r'resultados.xlsx') as writer:
+
+    # Unir as bases Murex e Book em uma nova aba chamada 'Diferencas', e incluindo uma coluna BASE para informar a orirem da linha
+    planilha_diferencas = pd.concat([planilha1, planilha2])
+
+    # Extrair apenas as linhas que não foram batidas
+    planilha_diferencas['BASE'] = ['MUREX' if index < len(planilha1) else 'BOOK' for index in range(len(planilha_diferencas))]
+    planilha_diferencas = planilha_diferencas[planilha_diferencas['STATUS'] != 'BATIDO']
+
+    # Ordenar as diferenças pela colunaSTATUS que contém o índice das linhas que melhor combinam
+    planilha_diferencas = planilha_diferencas.sort_values(by=['STATUS'])
+
+    # Excluir o índice da coluna STATUS
+    planilha_diferencas['STATUS'] = planilha_diferencas.apply(extrair_diferencas, axis=1)
+    planilha_diferencas.to_excel(writer, sheet_name='Diferenças', index=False)
+
+    # Executar a função para extrair da coluna STATUS apenas as diferenças
+    planilha1['STATUS
+
+'] = planilha1.apply(extrair_diferencas, axis=1)
+    planilha2['STATUS'] = planilha2.apply(extrair_diferencas, axis=1)
+
+    # Exportar as planilhas
+    planilha1.to_excel(writer, sheet_name='MUREX', index=False)
+    planilha2.to_excel(writer, sheet_name='MUREX', index=False)
+
+# Carregar o arquivo Excel
+wb = load_workbook(r'resultados.xlsx')
+
+# Selecionar a aba Diferenças
+diff_sheet = wb['Diferenças']
+
+# Encontrar dinamicamente o indice da coluna STATUS
+staus_column_index = None
+for col_idx in range(1, diff_sheet.max_column + 1):
+    if diff_sheet.cell(row=1, column=col_idx).value == 'STATUS':
+        staus_column_index = col_idx
+        break
+
+if staus_column_index is not None:
+    # Iterar sobre todas as linhas da aba Diferenças
+    for row_idx in range(2, diff_sheet.max_row + 1):
+        staus_value = diff_sheet.cell(row=row_idx, column=staus_column_index).value
+        destacar_diferencas_na_panilha(diff_sheet, staus_value, planilha_diferencas)
+
+# Salvar as alterações no arquivo Excel
+wb.save(r'resultados.xlsx')
+
+# Verificacao adicional quando tivermos diferença de PB
+def verificar_e_executar_nova_verificacao(planilha1, planilha2):
+    rerun = False
+    # Iterar linha por linha na planilha1
+    for index1, row1 in planilha1.iterrows():
+        if 'COUNTERPART' in row1['STATUS'] and 'INICIAL_CP' in row1['STATUS']:
+
+            row1_sem_colunas_extras = row1.drop(plan1_colunas_ignoradas, errors='ignore')
+            planilha2_sem_colunas_extras = planilha2.drop(columns=plan2_colunas_ignoradas, errors='ignore')
+            correspondente = planilha2_sem_colunas_extras.apply(lambda row2: row1_sem_colunas_extras.equals(row2) or (row1_sem_colunas_extras.isna().all() and row2.isna().all()), axis=1)
+
+            if correspondente.any():
+                index2 = correspondente[correspondente].index[0]
+                planilha1.at[index1, 'STATUS'] = 'BATIDO'
+                planilha2.at[index2, 'STATUS'] = 'BATIDO'
+                rerun = True
+    return rerun
+
+# Depois de rodar a comparação inicial e manipular os dados de status
+if (planilha2['STATUS'].str.contains('COUNTERPART')).any() and (planilha2['STATUS'].str.contains('INICIAL_CP')).any():
+    condicao_filtro = (planilha2['STATUS'].str.contains('COUNTERPART')) & (planilha2['STATUS'].str.contains('INICIAL_CP')) & (planilha2['PB_COUNTERPART'].str.contains('PRIME BROKER'))
+    linhas_filtradas_plan2 = planilha2[condicao_filtro]
+    for indice, linha in linhas_filtradas_plan2.iterrows():
+        planilha2.loc[indice, 'COUNTERPART'] = linha['PB_COUNTERPART']
+        planilha2.loc[indice, 'INCIAL_PB'] = linha['PB_INCIAL_CP']
+
+    rerun = verificar_e_executar_nova_verificacao(planilha1, planilha2)
+
+    if rerun:
+        planilha_diferencas = pd.concat([planilha1, planilha2])
+        planilha_diferencas['BASE'] = ['MUREX' if index < len(planilha1) else 'BOOK' for index in range(len(planilha_diferencas))]
+        planilha_diferencas = planilha_diferencas[planilha_diferencas['STATUS'] != 'BATIDO']
+        planilha_diferencas['STATUS'] = planilha_diferencas.apply(extrair_diferencas, axis=1)
+
+        with pd.ExcelWriter(r'resultados.xlsx', mode='a') as writer:
+            planilha_diferencas.to_excel(writer, sheet_name='Diferenças', index=False)
+```
+
+Agora, quando houver um rerun, as diferenças atualizadas também serão refletidas na aba "Diferenças".
