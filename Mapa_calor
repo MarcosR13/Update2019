@@ -1,0 +1,99 @@
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Carregar o arquivo Excel
+file_path = r''
+df = pd.read_excel(file_path)
+
+# Encontrar o menor custo para cada combinação de TICKER e TIPO por BROKER NAME
+min_costs = df.groupby(['TICKER', 'TIPO', 'BROKER NAME'])['CUSTO'].min().reset_index()
+
+# Pivotar os dados para que cada BROKER NAME seja uma coluna
+pivot_min_costs = min_costs.pivot_table(index=['TICKER', 'TIPO'], columns='BROKER NAME', values='CUSTO')
+
+# Gerar o mapa de calor
+plt.figure(figsize=(14, 10))
+sns.heatmap(pivot_min_costs, annot=True, fmt=".2f", cmap='coolwarm', linewidths=.5, linecolor='gray', cbar_kws={'label': 'Custo'})
+
+plt.title('Mapa de Calor dos Custos por Ticker e Broker')
+plt.xlabel('Broker Name')
+plt.ylabel('Ticker / Tipo')
+plt.xticks(rotation=45)
+plt.yticks(rotation=0)
+
+# Salvando o mapa de calor como imagem
+plt.savefig('mapa_de_calor.png')
+
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
+from openpyxl.formatting.rule import ColorScaleRule
+
+# Carregar o arquivo Excel
+file_path = r''
+df = pd.read_excel(file_path)
+
+
+# Função para gerar o mapa de calor e salvar a tabela no Excel com formatação
+def gerar_mapa_de_calor(df, tipo, writer, sheet_name, title):
+    # Filtrar por tipo
+    df_tipo = df[df['TIPO'] == tipo]
+
+    # Encontrar o menor custo para cada combinação de TICKER e TIPO por BROKER NAME
+    min_costs = df_tipo.groupby(['TICKER', 'TIPO', 'BROKER NAME'])['CUSTO'].min().reset_index()
+
+    # Pivotar os dados para que cada BROKER NAME seja uma coluna
+    pivot_min_costs = min_costs.pivot_table(index=['TICKER', 'TIPO'], columns='BROKER NAME', values='CUSTO')
+
+    # Salvar a tabela pivotada em uma aba do arquivo Excel
+    pivot_min_costs.to_excel(writer, sheet_name=sheet_name)
+
+    # Aplicar formatação condicional com openpyxl
+    writer.save()
+    wb = load_workbook(writer.path)
+    ws = wb[sheet_name]
+
+    # Definir a regra de escala de cores
+    color_scale_rule = ColorScaleRule(
+        start_type='min', start_color='00FF00',  # Verde
+        mid_type='percentile', mid_value=50, mid_color='FFFF00',  # Amarelo
+        end_type='max', end_color='FF0000'  # Vermelho
+    )
+
+    # Adicionar a regra de escala de cores ao intervalo de células
+    min_row = 2  # Primeira linha de dados
+    max_row = ws.max_row  # Última linha de dados
+    min_col = 2  # Primeira coluna de dados
+    max_col = ws.max_column  # Última coluna de dados
+    ws.conditional_formatting.add(
+        f"{ws.cell(row=min_row, column=min_col).coordinate}:{ws.cell(row=max_row, column=max_col).coordinate}",
+        color_scale_rule)
+
+    # Salvar o arquivo Excel com a formatação
+    wb.save(writer.path)
+
+    # Gerar o mapa de calor
+    plt.figure(figsize=(14, 10))
+    sns.heatmap(pivot_min_costs, annot=True, fmt=".2f", cmap='RdYlGn_r', linewidths=.5, linecolor='gray',
+                cbar_kws={'label': 'Custo'})
+
+    plt.title(title)
+    plt.xlabel('Broker Name')
+    plt.ylabel('Ticker / Tipo')
+    plt.xticks(rotation=45)
+    plt.yticks(rotation=0)
+
+    # Salvando o mapa de calor como imagem
+    plt.savefig(f"{sheet_name}.png")
+    plt.show()
+
+
+# Criar o ExcelWriter com openpyxl
+excel_filename = 'Custos_Opcoes_Futuros.xlsx'
+with pd.ExcelWriter(excel_filename, engine='openpyxl') as writer:
+    # Gerar mapas de calor para 'Option' e 'Futuro' e salvar as tabelas no Excel com formatação
+    gerar_mapa_de_calor(df, 'Option', writer, 'Custos de Opções', 'Custos de Opções por Broker')
+    gerar_mapa_de_calor(df, 'Futuro', writer, 'Custos de Futuros', 'Custos de Futuros por Broker')
