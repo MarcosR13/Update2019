@@ -1,0 +1,52 @@
+import pandas as pd
+
+# Carregar as bases de movimentação e registro
+movimentacao_df = pd.read_excel('path_to_movimentacao_file.xlsx')
+registro_df = pd.read_excel('path_to_registro_file.xlsx')
+
+# Filtrar apenas as movimentações internas que contêm a palavra 'interno'
+movimentacao_interna = movimentacao_df[movimentacao_df['Alocação'].str.contains('interno', case=False, na=False)]
+
+# Função para verificar correspondência de compra e venda
+def verificar_movimentacoes(df):
+    # Separar compras e vendas
+    compras = df[df['lado'] == 'compra']
+    vendas = df[df['lado'] == 'venda']
+
+    # Unir compras e vendas pelo ativo, volume e price
+    merged = compras.merge(vendas, on=['Ativo', 'Volume', 'Price'], suffixes=('_compra', '_venda'), how='outer', indicator=True)
+
+    # Filtrar as movimentações que não têm correspondência
+    sem_correspondencia = merged[merged['_merge'] != 'both']
+
+    # Adicionar coluna indicando correspondência na base original
+    df['Correspondencia'] = 'Sim'
+    df.loc[sem_correspondencia['id_compra'].tolist() + sem_correspondencia['id_venda'].tolist(), 'Correspondencia'] = 'Não'
+
+    return df
+
+# Verificar movimentações internas na base de movimentação
+movimentacao_interna = verificar_movimentacoes(movimentacao_interna)
+
+# Adicionar a coluna 'Registrado' na base de movimentação
+movimentacao_df['Registrado'] = movimentacao_df['id'].isin(registro_df['id']).replace({True: 'Sim', False: 'Não'})
+
+# Atualizar a base original de movimentação com as informações de correspondência interna
+movimentacao_df = movimentacao_df.merge(movimentacao_interna[['id', 'Correspondencia']], on='id', how='left')
+
+# Preencher valores NaN em 'Correspondencia' com 'N/A' para as linhas que não são internas
+movimentacao_df['Correspondencia'] = movimentacao_df['Correspondencia'].fillna('N/A')
+
+# Adicionar a coluna 'Encontrado' na base de registros
+registro_df['Encontrado'] = registro_df['id'].isin(movimentacao_df['id']).replace({True: 'Sim', False: 'Não'})
+
+# Exibir os resultados
+print("Base de movimentação atualizada:")
+print(movimentacao_df)
+
+print("\nBase de registros atualizada:")
+print(registro_df)
+
+# Salvar os resultados em arquivos Excel (opcional)
+movimentacao_df.to_excel('movimentacao_atualizada.xlsx', index=False)
+registro_df.to_excel('registro_atualizado.xlsx', index=False)
