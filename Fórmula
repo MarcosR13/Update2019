@@ -1,0 +1,28 @@
+Sub MenorCustoDinamico()
+    Dim ws As Worksheet
+    Dim Painel As Worksheet
+    Dim criterio As String
+    Dim formulaBase As String
+    Dim i As Integer
+    Dim LastRow As Long
+    
+    Set ws = ThisWorkbook.Sheets("Dados")
+    Set Painel = ThisWorkbook.Sheets("Painel")
+    
+    ' Inicia a fórmula base para o MÁXIMOSES
+    formulaBase = "=MÁXIMOSES(G:G"
+    
+    ' Loop através das colunas e adicionar os critérios dinamicamente
+    For i = 2 To 6 ' Ajuste o intervalo conforme a quantidade de critérios
+        If Painel.Cells(i, 3).Value = True Then
+            criterio = ", " & ws.Cells(1, i).Address(False, False) & ":" & ws.Cells(ws.Rows.Count, i).End(xlUp).Address(False, False) & ", " & ws.Cells(2, i).Address(False, False)
+            formulaBase = formulaBase & criterio
+        End If
+    Next i
+    
+    ' Finaliza a fórmula
+    formulaBase = formulaBase & ")"
+    
+    ' Insere a fórmula na célula desejada
+    ws.Cells(2, 8).Formula = formulaBase ' Coloque a fórmula na célula H2
+End Sub
