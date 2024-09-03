@@ -1,0 +1,39 @@
+Sub FiltrarECopiarMelhorCusto()
+    Dim wsDados As Worksheet
+    Dim wsResultados As Worksheet
+    Dim ultimaLinha As Long
+    Dim rng As Range
+    Dim melhorCusto As Double
+    
+    ' Definindo as planilhas
+    Set wsDados = ThisWorkbook.Sheets("Dados") ' Ajuste se necessário
+    On Error Resume Next
+    Set wsResultados = ThisWorkbook.Sheets("Resultados")
+    On Error GoTo 0
+    
+    ' Se a aba "Resultados" não existir, cria uma nova
+    If wsResultados Is Nothing Then
+        Set wsResultados = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+        wsResultados.Name = "Resultados"
+    Else
+        ' Limpa os dados existentes na aba "Resultados"
+        wsResultados.Cells.Clear
+    End If
+    
+    ' Encontrar a última linha com dados na planilha de dados
+    ultimaLinha = wsDados.Cells(wsDados.Rows.Count, "G").End(xlUp).Row
+    
+    ' Encontra o menor custo
+    melhorCusto = Application.WorksheetFunction.Min(wsDados.Range("G2:G" & ultimaLinha))
+
+    ' Filtrar os dados para o melhor custo
+    wsDados.Range("A1:H" & ultimaLinha).AutoFilter Field:=8, Criteria1:=melhorCusto ' Ajuste o campo se necessário
+
+    ' Copiar os dados filtrados para a aba "Resultados"
+    Set rng = wsDados.Range("A1:H" & ultimaLinha).SpecialCells(xlCellTypeVisible)
+    rng.Copy Destination:=wsResultados.Range("A1")
+
+    ' Limpar o filtro
+    wsDados.AutoFilterMode = False
+
+End Sub
