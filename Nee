@@ -1,0 +1,60 @@
+Sub SimuladorCenarios()
+
+    Dim wsCusto As Worksheet
+    Dim wsPainel As Worksheet
+    Dim wsResultado As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    Dim tipoTicker As String
+    Dim menorCusto As Double
+    Dim brokerSelecionado As Boolean
+    Dim resultRow As Long
+    
+    ' Definindo as planilhas
+    Set wsCusto = ThisWorkbook.Sheets("Custo")
+    Set wsPainel = ThisWorkbook.Sheets("Painel")
+    
+    ' Criar/Acessar a aba "Resultado"
+    On Error Resume Next
+    Set wsResultado = ThisWorkbook.Sheets("Resultado")
+    If wsResultado Is Nothing Then
+        Set wsResultado = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+        wsResultado.Name = "Resultado"
+    End If
+    On Error GoTo 0
+    
+    ' Limpar a aba Resultado
+    wsResultado.Cells.Clear
+    
+    ' Copiar os cabeçalhos
+    wsCusto.Rows(1).Copy Destination:=wsResultado.Rows(1)
+    
+    ' Verificar se Broker está selecionado
+    brokerSelecionado = wsPainel.Range("B1").Value ' Altere "B1" para a célula onde o broker está sendo selecionado
+    
+    If Not brokerSelecionado Then
+        MsgBox "Broker não está selecionado.", vbExclamation
+        Exit Sub
+    End If
+    
+    ' Encontrar a última linha com dados na aba Custo
+    lastRow = wsCusto.Cells(wsCusto.Rows.Count, "A").End(xlUp).Row
+    
+    ' Inicializar linha para resultado
+    resultRow = 2
+    
+    ' Criar Coluna Auxiliar "Tipo & Ticker" e Encontrar o Menor Custo
+    For i = 2 To lastRow
+        tipoTicker = wsCusto.Cells(i, 4).Value & wsCusto.Cells(i, 5).Value ' Colunas D e E para Tipo e Ticker
+        menorCusto = Application.WorksheetFunction.MinIfs(wsCusto.Range("F:F"), wsCusto.Range("G:G"), tipoTicker) ' Coluna F para o custo total, Coluna G para Tipo & Ticker
+        
+        ' Se o custo na linha atual for igual ao menor custo, copiar para a aba "Resultado"
+        If wsCusto.Cells(i, 6).Value = menorCusto Then
+            wsCusto.Rows(i).Copy Destination:=wsResultado.Rows(resultRow)
+            resultRow = resultRow + 1
+        End If
+    Next i
+    
+    MsgBox "Cálculo concluído. Resultados foram adicionados à aba 'Resultado'.", vbInformation
+
+End Sub
