@@ -1,87 +1,45 @@
-Sub MelhorCustoTodasLinhas()
-
-    Dim wsPainel As Worksheet
+Sub FiltrarECopiarMelhorCusto()
     Dim wsDados As Worksheet
-    Dim custo As Double
-    Dim i As Long
-    Dim lastRow As Long
-    Dim criterios As String
-    Dim criterio1 As Boolean
-    Dim criterio2 As Boolean
-    Dim criterio3 As Boolean
-    Dim criterio4 As Boolean
-    Dim criterio5 As Boolean
-    Dim criterio6 As Boolean
+    Dim wsResultados As Worksheet
+    Dim ultimaLinha As Long
+    Dim rng As Range
+    Dim melhorCusto As Double
     
-    Set wsPainel = ThisWorkbook.Sheets("Painel")
-    Set wsDados = ThisWorkbook.Sheets("Dados") ' Ajuste o nome da planilha conforme necessário
-
-    ' Define os critérios com base nas seleções do Painel
-    criterio1 = wsPainel.Range("$C$7").Value
-    criterio2 = wsPainel.Range("$C$3").Value
-    criterio3 = wsPainel.Range("$C$4").Value
-    criterio4 = wsPainel.Range("$C$5").Value
-    criterio5 = wsPainel.Range("$C$6").Value
-    criterio6 = wsPainel.Range("$C$2").Value
+    ' Definindo as planilhas
+    Set wsDados = ThisWorkbook.Sheets("Dados") ' Ajuste se necessário
+    On Error Resume Next
+    Set wsResultados = ThisWorkbook.Sheets("Resultados")
+    On Error GoTo 0
     
-    ' Descobre a última linha preenchida na coluna A da planilha de dados
-    lastRow = wsDados.Cells(wsDados.Rows.Count, "A").End(xlUp).Row
-
-    ' Loop pelas linhas da aba Dados
-    For i = 2 To lastRow ' Assume que a primeira linha são cabeçalhos
-
-        ' Reseta os critérios para cada linha
-        criterios = ""
-        
-        ' Constrói os critérios dinâmicos para a fórmula
-        If criterio1 Then
-            criterios = "D:D=D" & i & ", E:E=E" & i
-        End If
-        If criterio2 Then
-            If criterios <> "" Then criterios = criterios & " And "
-            criterios = criterios & "B:B=B" & i
-        End If
-        If criterio3 Then
-            If criterios <> "" Then criterios = criterios & " And "
-            criterios = criterios & "A:A=""LICANIA"""
-        End If
-        If criterio4 Then
-            If criterios <> "" Then criterios = criterios & " And "
-            criterios = criterios & "A:A=""NASSAU"""
-        End If
-        If criterio5 Then
-            If criterios <> "" Then criterios = criterios & " And "
-            criterios = criterios & "A:A=A" & i
-        End If
-        If criterio6 Then
-            If criterios <> "" Then criterios = criterios & " And "
-            criterios = criterios & "C:C=C" & i
-        End If
-        
-        On Error GoTo ErrHandler
-        
-        ' Aplica a função MinIfs para encontrar o menor custo baseado nos critérios para a linha atual
-        custo = Application.WorksheetFunction.MinIfs(wsDados.Range("G:G"), _
-                                                    wsDados.Range("D:D"), wsDados.Range("D" & i), _
-                                                    wsDados.Range("E:E"), wsDados.Range("E" & i), _
-                                                    wsDados.Range("B:B"), wsDados.Range("B" & i), _
-                                                    wsDados.Range("A:A"), wsDados.Range("A" & i), _
-                                                    wsDados.Range("C:C"), wsDados.Range("C" & i))
-        
-        On Error GoTo 0
-        
-        ' Insere o valor do custo na coluna desejada (por exemplo, coluna H)
-        If custo = 0 Then
-            wsDados.Cells(i, "H").Value = "Melhor Custo"
-        Else
-            wsDados.Cells(i, "H").Value = custo
-        End If
+    ' Se a aba "Resultados" não existir, cria uma nova
+    If wsResultados Is Nothing Then
+        Set wsResultados = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+        wsResultados.Name = "Resultados"
+    Else
+        ' Limpa os dados existentes na aba "Resultados"
+        wsResultados.Cells.Clear
+    End If
     
-    Next i
+    ' Encontrar a última linha com dados na planilha de dados
+    ultimaLinha = wsDados.Cells(wsDados.Rows.Count, "G").End(xlUp).Row
     
-    Exit Sub
+    ' Encontra o menor custo
+    melhorCusto = Application.WorksheetFunction.Min(wsDados.Range("G2:G" & ultimaLinha))
 
-ErrHandler:
-    wsDados.Cells(i, "H").Value = "'*'"
+    ' Inserir uma fórmula na coluna H para identificar linhas com o menor custo
+    wsDados.Range("H2:H" & ultimaLinha).Formula = "=IF(G2=" & melhorCusto & ",TRUE,FALSE)"
+    
+    ' Filtrar os dados onde a coluna H é TRUE
+    wsDados.Range("A1:H" & ultimaLinha).AutoFilter Field:=8, Criteria1:=True
+    
+    ' Copiar os dados filtrados para a aba "Resultados"
+    Set rng = wsDados.Range("A1:H" & ultimaLinha).SpecialCells(xlCellTypeVisible)
+    rng.Copy Destination:=wsResultados.Range("A1")
+
+    ' Limpar o filtro
+    wsDados.AutoFilterMode = False
+
+    ' Remover a fórmula da coluna H
+    wsDados.Range("H2:H" & ultimaLinha).ClearContents
 
 End Sub
