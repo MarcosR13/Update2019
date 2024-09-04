@@ -1,0 +1,71 @@
+Sub MelhorCusto()
+
+    Dim wsPainel As Worksheet
+    Dim wsDados As Worksheet
+    Dim custo As Double
+    Dim criterios As String
+    Dim criterio1 As Boolean
+    Dim criterio2 As Boolean
+    Dim criterio3 As Boolean
+    Dim criterio4 As Boolean
+    Dim criterio5 As Boolean
+    Dim criterio6 As Boolean
+    Dim criterio7 As Boolean
+    Dim resultadoCelula As Range
+    
+    Set wsPainel = ThisWorkbook.Sheets("Painel")
+    Set wsDados = ThisWorkbook.Sheets("Dados") ' Ajuste o nome da planilha conforme necessário
+    Set resultadoCelula = wsPainel.Range("D10") ' Ajuste a célula onde o resultado deve ser exibido
+
+    criterio1 = wsPainel.Range("$C$7").Value
+    criterio2 = wsPainel.Range("$C$3").Value
+    criterio3 = wsPainel.Range("$C$4").Value
+    criterio4 = wsPainel.Range("$C$5").Value
+    criterio5 = wsPainel.Range("$C$6").Value
+    criterio6 = wsPainel.Range("$C$2").Value
+
+    If criterio1 Then
+        criterios = "D:D=D2, E:E=E2"
+    End If
+    If criterio2 Then
+        If criterios <> "" Then criterios = criterios & " And "
+        criterios = criterios & "B:B=B2"
+    End If
+    If criterio3 Then
+        If criterios <> "" Then criterios = criterios & " And "
+        criterios = criterios & "A:A=""LICANIA"""
+    End If
+    If criterio4 Then
+        If criterios <> "" Then criterios = criterios & " And "
+        criterios = criterios & "A:A=""NASSAU"""
+    End If
+    If criterio5 Then
+        If criterios <> "" Then criterios = criterios & " And "
+        criterios = criterios & "A:A=A2"
+    End If
+    If criterio6 Then
+        If criterios <> "" Then criterios = criterios & " And "
+        criterios = criterios & "C:C=C2"
+    End If
+
+    On Error GoTo ErrHandler
+    ' Usa a fórmula array para buscar o menor custo baseado nos critérios
+    custo = Application.WorksheetFunction.MinIfs(wsDados.Range("G:G"), _
+                                                wsDados.Range("D:D"), wsDados.Range("D2"), _
+                                                wsDados.Range("E:E"), wsDados.Range("E2"), _
+                                                wsDados.Range("B:B"), wsDados.Range("B2"), _
+                                                wsDados.Range("A:A"), wsDados.Range("A2"), _
+                                                wsDados.Range("C:C"), wsDados.Range("C2"))
+    On Error GoTo 0
+
+    If custo = 0 Then
+        resultadoCelula.Value = "Melhor Custo"
+    Else
+        resultadoCelula.Value = custo
+    End If
+    
+    Exit Sub
+
+ErrHandler:
+    resultadoCelula.Value = "'*'"
+End Sub
