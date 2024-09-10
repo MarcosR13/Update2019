@@ -1,0 +1,34 @@
+# Função para aplicar a regra de multiplicação ou divisão com base nas colunas de moeda e cotação
+def calcular_cenarios(df):
+    # Itera sobre cada linha do DataFrame
+    for index, row in df.iterrows():
+        # Quebra da coluna 'Moedas_x' em moeda base e cotada
+        moeda_base, moeda_cotada = row['Moedas_x'].split('/')
+        
+        # Regras para BRL
+        if row['CUR'] == moeda_base and row['Cotação_BRL'] > 1:
+            # Multiplicar para BRL
+            df.at[index, 'Cenario_Atual_BRL'] = row['Signed NominalO'] * row['Custo_Atual'] * row['Cotação_BRL']
+            df.at[index, 'Melhor_Cenario_BRL'] = row['Signed NominalO'] * row['Custo_Total_FCM'] * row['Cotação_BRL']
+        else:
+            # Dividir para BRL
+            df.at[index, 'Cenario_Atual_BRL'] = row['Signed NominalO'] / row['Custo_Atual'] / row['Cotação_BRL']
+            df.at[index, 'Melhor_Cenario_BRL'] = row['Signed NominalO'] / row['Custo_Total_FCM'] / row['Cotação_BRL']
+        
+        # Regras para USD
+        if row['CUR'] == moeda_base and row['Cotação_USD'] > 1:
+            # Multiplicar para USD
+            df.at[index, 'Cenario_Atual_USD'] = row['Signed NominalO'] * row['Custo_Atual'] * row['Cotação_USD']
+            df.at[index, 'Melhor_Cenario_USD'] = row['Signed NominalO'] * row['Custo_Total_FCM'] * row['Cotação_USD']
+        else:
+            # Dividir para USD
+            df.at[index, 'Cenario_Atual_USD'] = row['Signed NominalO'] / row['Custo_Atual'] / row['Cotação_USD']
+            df.at[index, 'Melhor_Cenario_USD'] = row['Signed NominalO'] / row['Custo_Total_FCM'] / row['Cotação_USD']
+    
+    return df
+
+# Aplicar a função no DataFrame
+df = calcular_cenarios(df)
+
+# Visualizar o DataFrame atualizado
+print(df)
