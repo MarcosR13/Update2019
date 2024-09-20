@@ -1,7 +1,4 @@
-import openpyxl as px
-import pandas as pd
-
-# Função para atualizar e extrair dados das abas
+# Função para atualizar e extrair dados das abas e exportar para Excel
 def atualizar_base(file_path):
     try:
         # Abrir a planilha
@@ -17,14 +14,12 @@ def atualizar_base(file_path):
                 sheet = workbook[sheet_name]
                 data = pd.DataFrame(sheet.values)
 
-                # Verificar se há dados suficientes na aba
-                if data.shape[0] < 6:
-                    print(f"Aba {sheet_name} não tem dados suficientes para processar.")
-                    continue
-
-                # Pegar os nomes das colunas e os dados a partir da linha 5
-                data.columns = data.iloc[4]  # Nomes das colunas na linha 5
-                data = data[5:]  # Dados a partir da linha 6
+                # Encontrar a linha que contém "id_trade" e usá-la como linha de cabeçalho
+                header_row_index = data[data[0] == 'id_trade'].index[0]  # Busca a linha que contém "id_trade"
+                
+                # Definir os nomes das colunas e os dados a partir dessa linha
+                data.columns = data.iloc[header_row_index]  # Define as colunas a partir da linha "id_trade"
+                data = data[header_row_index + 1:]  # Dados a partir da próxima linha
 
                 # Verificar se os filtros estão presentes
                 if 'broker_name' not in data.columns or 'account' not in data.columns:
@@ -42,14 +37,10 @@ def atualizar_base(file_path):
                 
             except Exception as e:
                 print(f"Erro ao processar aba {sheet_name}: {e}")
-                
-        return combined_data
-
+        
+        # Exportar o resultado final para um arquivo Excel
+        combined_data.to_excel("resultado.xlsx", index=False)
+        print("Dados exportados para 'resultado.xlsx'.")
+        
     except Exception as e:
         print(f"Erro ao abrir ou processar a planilha: {e}")
-
-# Caminho do arquivo
-file_path = "/mnt/data/186567AF-519A-42D6-8CAE-85F7184B7535.jpeg"
-
-# Testar a função
-atualizar_base(file_path)
