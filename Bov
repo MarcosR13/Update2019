@@ -1,0 +1,55 @@
+import openpyxl as px
+import pandas as pd
+
+# Função para atualizar e extrair dados das abas
+def atualizar_base(file_path):
+    try:
+        # Abrir a planilha
+        workbook = px.load_workbook(file_path, keep_vba=True)
+
+        # Definir as abas a serem processadas
+        processar_abas = ['COMMODITIES', 'VOL ARB', 'VOL COE', 'VOL IBOV', 'VOL SS']
+        combined_data = pd.DataFrame()
+
+        for sheet_name in processar_abas:
+            try:
+                # Acessar cada aba
+                sheet = workbook[sheet_name]
+                data = pd.DataFrame(sheet.values)
+
+                # Verificar se há dados suficientes na aba
+                if data.shape[0] < 6:
+                    print(f"Aba {sheet_name} não tem dados suficientes para processar.")
+                    continue
+
+                # Pegar os nomes das colunas e os dados a partir da linha 5
+                data.columns = data.iloc[4]  # Nomes das colunas na linha 5
+                data = data[5:]  # Dados a partir da linha 6
+
+                # Verificar se os filtros estão presentes
+                if 'broker_name' not in data.columns or 'account' not in data.columns:
+                    print(f"Filtros ausentes na aba {sheet_name}. Pulando...")
+                    continue
+
+                # Aplicar os filtros
+                filtered_data = data[
+                    (data['broker_name'].str.contains('EXERC', case=False)) &
+                    (data['account'].str.contains('555'))
+                ]
+
+                combined_data = pd.concat([combined_data, filtered_data], ignore_index=True)
+                print(f"Aba {sheet_name} processada com sucesso.")
+                
+            except Exception as e:
+                print(f"Erro ao processar aba {sheet_name}: {e}")
+                
+        return combined_data
+
+    except Exception as e:
+        print(f"Erro ao abrir ou processar a planilha: {e}")
+
+# Caminho do arquivo
+file_path = "/mnt/data/186567AF-519A-42D6-8CAE-85F7184B7535.jpeg"
+
+# Testar a função
+atualizar_base(file_path)
