@@ -14,12 +14,20 @@ def atualizar_base(file_path):
                 sheet = workbook[sheet_name]
                 data = pd.DataFrame(sheet.values)
 
-                # Encontrar a linha que contém "id_trade" e usá-la como linha de cabeçalho
-                header_row_index = data[data[0] == 'id_trade'].index[0]  # Busca a linha que contém "id_trade"
-                
+                # Loop para encontrar a linha que contém 'id_trade' na primeira coluna
+                header_row_index = None
+                for i, value in enumerate(data[0]):  # Loop pela primeira coluna (coluna A)
+                    if value == 'id_trade':
+                        header_row_index = i
+                        break
+
+                if header_row_index is None:
+                    print(f"'id_trade' não encontrado na aba {sheet_name}. Pulando...")
+                    continue
+
                 # Definir os nomes das colunas e os dados a partir dessa linha
-                data.columns = data.iloc[header_row_index]  # Define as colunas a partir da linha "id_trade"
-                data = data[header_row_index + 1:]  # Dados a partir da próxima linha
+                data.columns = data.iloc[header_row_index]  # Define os nomes das colunas
+                data = data[header_row_index + 1:]  # Dados a partir da linha seguinte
 
                 # Verificar se os filtros estão presentes
                 if 'broker_name' not in data.columns or 'account' not in data.columns:
