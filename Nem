@@ -1,0 +1,40 @@
+
+
+# Função que verifica a linha oposta
+def encontrar_linha_oposta(row, df):
+    # Buscar a linha oposta com base nos critérios
+    linha_oposta = df[
+        (df['Ticker'] == row['Ticker']) &
+        (df['PU'] == row['PU']) &
+        (df['Volume'] == -row['Volume']) &
+        (df['Price'] == row['Price']) &
+        (df.index != row.name)  # Para garantir que não seja a mesma linha
+    ]
+    
+    # Se encontrou a linha oposta
+    if not linha_oposta.empty:
+        # Verifica as colunas diferentes, exceto o Volume
+        cols_a_comparar = ['Ticker', 'PU', 'Price', 'Contra-parte']
+        linha_oposta = linha_oposta.iloc[0]  # Pegar a primeira linha oposta
+        
+        # Verifica se há alguma diferença nas colunas especificadas
+        diferencas = [col for col in cols_a_comparar if row[col] != linha_oposta[col]]
+        
+        if not diferencas:
+            # Se não houver diferenças, marcar ambas as linhas como "NEM OK"
+            df.at[row.name, 'Resultado'] = 'NEM OK'
+            df.at[linha_oposta.name, 'Resultado'] = 'NEM OK'
+        else:
+            # Caso contrário, mostrar as colunas que estão diferentes
+            df.at[row.name, 'Resultado'] = f'Diferença em: {", ".join(diferencas)}'
+            df.at[linha_oposta.name, 'Resultado'] = f'Diferença em: {", ".join(diferencas)}'
+    else:
+        # Se não encontrar uma linha oposta, retorna 'Sem correspondência'
+        df.at[row.name, 'Resultado'] = 'Sem correspondência'
+
+# Aplicar a função para cada linha
+df_his['Resultado'] = None  # Cria a coluna de resultado
+df_his.apply(lambda row: encontrar_linha_oposta(row, df_his), axis=1)
+
+# Exibir o dataframe final com o resultado
+print(df_his)
