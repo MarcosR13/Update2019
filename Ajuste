@@ -1,0 +1,44 @@
+def calcular_cenarios(df):
+    # Atualiza valores caso 'veic_y' esteja vazio
+    for index, row in df.iterrows():
+        if pd.isna(row['veic_y']) or row['veic_y'] == '':
+            df.at[index, 'Custo_Total_FCM'] = row['Custo_Atual']
+            df.at[index, 'veic_y'] = 'Sem comparativo'
+
+    # Itera sobre cada linha do DataFrame para aplicar os cálculos
+    for index, row in df.iterrows():
+        # Quebra da coluna 'Moedas_x' em moeda base e cotada
+        moeda_base_brl, moeda_cotada_brl = row['Moedas_x'].split('/')
+        # Quebra da coluna 'Moedas_y' em moeda base e cotada
+        moeda_base_usd, moeda_cotada_usd = row['Moedas_y'].split('/')
+
+        # Regras para BRL
+        if moeda_base_brl == 'BRL':
+            # Multiplicar para BRL
+            df.at[index, 'Cenario_Atual_BRL'] = row['Signed Nominal'] * row['Custo_Atual'] * row['Cotacao_BRL']
+            df.at[index, 'Melhor_Cenario_BRL'] = row['Signed Nominal'] * row['Custo_Total_FCM'] * row['Cotacao_BRL']
+        else:
+            # Dividir para BRL
+            df.at[index, 'Cenario_Atual_BRL'] = row['Signed Nominal'] * row['Custo_Atual'] / row['Cotacao_BRL']
+            df.at[index, 'Melhor_Cenario_BRL'] = row['Signed Nominal'] * row['Custo_Total_FCM'] / row['Cotacao_BRL']
+
+        # Regras para USD
+        if moeda_base_usd == 'USD' and moeda_cotada_usd == 'USD':
+            # Multiplicar para USD
+            df.at[index, 'Cenario_Atual_USD'] = row['Signed Nominal'] * row['Custo_Atual']
+            df.at[index, 'Melhor_Cenario_USD'] = row['Signed Nominal'] * row['Custo_Total_FCM']
+        elif row['PL_CUR'] == moeda_base_usd:
+            # Multiplicar para USD
+            df.at[index, 'Cenario_Atual_USD'] = row['Signed Nominal'] * row['Custo_Atual'] * row['Cotacao_USD']
+            df.at[index, 'Melhor_Cenario_USD'] = row['Signed Nominal'] * row['Custo_Total_FCM'] * row['Cotacao_USD']
+        else:
+            # Dividir para USD
+            df.at[index, 'Cenario_Atual_USD'] = row['Signed Nominal'] * row['Custo_Atual'] / row['Cotacao_USD']
+            df.at[index, 'Melhor_Cenario_USD'] = row['Signed Nominal'] * row['Custo_Total_FCM'] / row['Cotacao_USD']
+
+    # Define o tipo de cenário
+    df['Tipo_cenario'] = df.apply(lambda row: 'Pior' if row['Cenario_Atual_USD'] > row['Melhor_Cenario_USD'] 
+                                  else ('Estável' if row['Cenario_Atual_USD'] == row['Melhor_Cenario_USD'] 
+                                        else 'Melhor'), axis=1)
+
+    return df
