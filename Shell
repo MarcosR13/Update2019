@@ -1,0 +1,58 @@
+Public Sub ChamarPython()
+    ' Caminhos dinâmicos com base no nome da planilha ativa
+    Dim CaminhoPython As String
+    Dim Book As String
+    Dim Murex As String
+    Dim Batimento As String
+    Dim SheetName As String
+    Dim WshShell As Object
+    
+    ' Obtém o nome da planilha ativa
+    SheetName = ActiveSheet.Name
+    
+    ' Ajusta os caminhos de acordo com o nome da planilha
+    If SheetName = "Planilha1" Then
+        CaminhoPython = """C:\Program Files\Python 3.9.6\python.exe"""
+        Book = """C:\Scripts\Planilha1_Book.py"""
+        Murex = """C:\Scripts\Planilha1_Murex.py"""
+        Batimento = """C:\Scripts\Planilha1_Batimento.py"""
+    ElseIf SheetName = "Planilha2" Then
+        CaminhoPython = """C:\Program Files\Python 3.9.6\python.exe"""
+        Book = """C:\Scripts\Planilha2_Book.py"""
+        Murex = """C:\Scripts\Planilha2_Murex.py"""
+        Batimento = """C:\Scripts\Planilha2_Batimento.py"""
+    Else
+        MsgBox "Planilha não reconhecida. Ajuste os caminhos para esta planilha.", vbExclamation
+        Exit Sub
+    End If
+
+    ' Inicializa o objeto WScript.Shell
+    Set WshShell = CreateObject("WScript.Shell")
+    
+    ' Variáveis para capturar tempo de execução
+    Dim StartTime As Double
+    Dim EndTime As Double
+    Dim ExecutionTime As Double
+
+    ' Executa o primeiro script Python (Book) e espera até o término
+    StartTime = Timer
+    WshShell.Run CaminhoPython & " " & Book, 1, True ' O "True" faz o VBA esperar o término
+    EndTime = Timer
+    ExecutionTime = EndTime - StartTime
+    MsgBox "Tempo de execução para Book: " & ExecutionTime & " segundos"
+    
+    ' Executa o segundo script Python (Murex) e espera até o término
+    StartTime = Timer
+    WshShell.Run CaminhoPython & " " & Murex, 1, True
+    EndTime = Timer
+    ExecutionTime = EndTime - StartTime
+    MsgBox "Tempo de execução para Murex: " & ExecutionTime & " segundos"
+    
+    ' Executa o terceiro script Python (Batimento) e espera até o término
+    StartTime = Timer
+    WshShell.Run CaminhoPython & " " & Batimento, 1, True
+    EndTime = Timer
+    ExecutionTime = EndTime - StartTime
+    MsgBox "Tempo de execução para Batimento: " & ExecutionTime & " segundos"
+
+End Sub
