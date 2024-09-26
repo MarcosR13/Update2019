@@ -1,0 +1,73 @@
+import pandas as pd
+import numpy as np
+
+# Função de processamento do DataFrame
+def processar_dataframe_otimizado(df):
+    df['cenario_atual_brl'] = np.where(
+        df['moeda_x'].str.contains('BRL/'),
+        df['signed_nominal0'] * df['custo_atual'] / df['cotacao_brl'],
+        df['signed_nominal0'] * df['custo_atual'] * df['cotacao_brl']
+    )
+    
+    df['cenario_atual_usd'] = np.where(
+        df['moeda_y'].str.contains('USD/'),
+        df['signed_nominal0'] * df['custo_atual'] / df['cotacao_usd'],
+        df['signed_nominal0'] * df['custo_atual'] * df['cotacao_usd']
+    )
+    
+    df['novo_cenario_brl'] = np.where(
+        df['moeda_x'].str.contains('BRL/'),
+        df['signed_nominal0'] * df['custo_fmc_total'] / df['cotacao_brl'],
+        df['signed_nominal0'] * df['custo_fmc_total'] * df['cotacao_brl']
+    )
+    
+    df['novo_cenario_usd'] = np.where(
+        df['moeda_y'].str.contains('USD/'),
+        df['signed_nominal0'] * df['custo_fmc_total'] / df['cotacao_usd'],
+        df['signed_nominal0'] * df['custo_fmc_total'] * df['cotacao_usd']
+    )
+
+    # Adicionando a nova coluna tipo_cenario
+    df['tipo_cenario'] = np.where(
+        df['cenario_atual_usd'] <= df['cenario_atual_brl'],
+        'manter',
+        'alterar'
+    )
+
+    return df
+
+# Função para processar múltiplos DataFrames e exportar para Excel
+def processar_multiplos_dataframes_e_exportar(dfs, nome_base):
+    for i, df in enumerate(dfs):
+        resultado = processar_dataframe_otimizado(df)
+        # Exportar cada DataFrame processado para um arquivo Excel
+        nome_arquivo = f"{nome_base}_resultado_{i + 1}.xlsx"
+        resultado.to_excel(nome_arquivo, index=False)
+        print(f"Exportado: {nome_arquivo}")
+
+# Exemplo de uso com múltiplos DataFrames
+df1 = pd.DataFrame({
+    'moeda_x': ['CAD/BRL', 'USD/CAD'],
+    'moeda_y': ['USD/BRL', 'CAD/USD'],
+    'cotacao_brl': [4.20, 1.30],
+    'cotacao_usd': [0.75, 0.75],
+    'signed_nominal0': [3000, 1500],
+    'custo_atual': [600, 800],
+    'custo_fmc_total': [650, 850]
+})
+
+df2 = pd.DataFrame({
+    'moeda_x': ['AUD/BRL', 'BRL/TWD'],
+    'moeda_y': ['AUD/USD', 'USD/TWD'],
+    'cotacao_brl': [4.50, 1.00],
+    'cotacao_usd': [0.75, 0.75],
+    'signed_nominal0': [2000, 1000],
+    'custo_atual': [750, 500],
+    'custo_fmc_total': [800, 550]
+})
+
+# Lista de DataFrames para processar
+dfs = [df1, df2]
+
+# Processar todos os DataFrames e exportar
+processar_multiplos_dataframes_e_exportar(dfs, "resultados")
